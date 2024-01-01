@@ -76,7 +76,7 @@ func (p *Player) getStats(url string) (map[string]Statistics, error) {
 	}
 
 	// Game Stats
-	rawStats := map[string]map[string]interface{}{}
+	rawStats := map[string]any{}
 	err = json.Unmarshal(data, &rawStats)
 	if err != nil {
 		return nil, err
@@ -84,9 +84,13 @@ func (p *Player) getStats(url string) (map[string]Statistics, error) {
 	delete(rawStats, "main")
 	stats := map[string]Statistics{}
 	for gameId, rawData := range rawStats {
+		data, ok := rawData.(map[string]any)
+		if !ok {
+			continue
+		}
 		stats[gameId] = Statistics{
 			game: games[gameId],
-			data: rawData,
+			data: data,
 		}
 	}
 	return stats, nil
@@ -97,13 +101,14 @@ func (p *Player) Update() error {
 	if err != nil {
 		return err
 	}
-	monthlyStats, err := p.getStats(MonthlyStatsUrl)
-	if err != nil {
-		return err
-	}
 
 	oldStats := p.allTimeStatistics
 	p.allTimeStatistics = allTimeStats
+
+	monthlyStats, err := p.getStats(MonthlyStatsUrl)
+	if err != nil {
+		return nil
+	}
 	p.monthlyStatistics = monthlyStats
 
 	var currentGame *Game = nil

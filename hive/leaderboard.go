@@ -7,19 +7,19 @@ import (
 	"net/http"
 )
 
-type Leaderboard []map[string]interface{}
+type Leaderboard []Statistics
 
 func (l Leaderboard) PlayerPosition(p *Player) (int, bool) {
 	for _, entry := range l {
-		username := entry["username"].(string)
+		username := entry.data["username"].(string)
 		if username == p.UsernameCc {
-			return int(entry["human_index"].(float64)), true
+			return int(entry.data["human_index"].(float64)), true
 		}
 	}
 	return 0, false
 }
 
-func getLeaderboard(url string) (Leaderboard, error) {
+func getLeaderboard(url string, game *Game) (Leaderboard, error) {
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -27,18 +27,24 @@ func getLeaderboard(url string) (Leaderboard, error) {
 	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 
-	var lb Leaderboard
-	err = json.Unmarshal(data, &lb)
+	var rawLb []map[string]any
+	err = json.Unmarshal(data, &rawLb)
 	if err != nil {
 		return nil, err
 	}
+
+	lb := make(Leaderboard, len(rawLb))
+	for i, data := range rawLb {
+		lb[i] = Statistics{game, data}
+	}
+
 	return lb, nil
 }
 
 func AllTimeLeaderboard(game *Game) (Leaderboard, error) {
-	return getLeaderboard(fmt.Sprintf(AllTimeLeaderboardUrl, game.Id))
+	return getLeaderboard(fmt.Sprintf(AllTimeLeaderboardUrl, game.Id), game)
 }
 
 func MonthlyLeaderboard(game *Game) (Leaderboard, error) {
-	return getLeaderboard(fmt.Sprintf(MonthlyLeaderboardUrl, game.Id))
+	return getLeaderboard(fmt.Sprintf(MonthlyLeaderboardUrl, game.Id), game)
 }

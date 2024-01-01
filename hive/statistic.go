@@ -5,7 +5,7 @@ type Statistic[T interface{}] struct {
 	getValue func(Statistics) T
 }
 
-func directStatistic(id, name string) *Statistic[int] {
+func DirectStatistic(id, name string) *Statistic[int] {
 	return &Statistic[int]{
 		Name: name,
 		getValue: func(s Statistics) int {
@@ -14,8 +14,22 @@ func directStatistic(id, name string) *Statistic[int] {
 	}
 }
 
+func RatioStatistic(name string, n, d *Statistic[int]) *Statistic[float64] {
+	return &Statistic[float64]{
+		Name: name,
+		getValue: func(s Statistics) float64 {
+			nValue := s.GetInt(n)
+			dValue := s.GetInt(d)
+			if dValue == 0 {
+				return float64(nValue)
+			}
+			return float64(nValue) / float64(dValue)
+		},
+	}
+}
+
 var (
-	StatisticExperience = directStatistic("xp", "XP")
+	StatisticExperience = DirectStatistic("xp", "XP")
 	StatisticLevel      = &Statistic[int]{
 		Name: "Level",
 		getValue: func(s Statistics) int {
@@ -38,27 +52,19 @@ var (
 			return level
 		},
 	}
-	StatisticGamesPlayed = directStatistic("played", "Games Played")
-	StatisticWins        = directStatistic("victories", "Wins")
+	StatisticGamesPlayed = DirectStatistic("played", "Games Played")
+	StatisticWins        = DirectStatistic("victories", "Wins")
 	StatisticLosses      = &Statistic[int]{
 		Name: "Losses",
 		getValue: func(s Statistics) int {
 			return s.GetInt(StatisticGamesPlayed) - s.GetInt(StatisticWins)
 		},
 	}
-	StatisticKills          = directStatistic("kills", "Kills")
-	StatisticDeaths         = directStatistic("deaths", "Deaths")
-	StatisticKillDeathRatio = &Statistic[float64]{
-		Name: "KDR",
-		getValue: func(s Statistics) float64 {
-			kills := s.GetInt(StatisticKills)
-			deaths := s.GetInt(StatisticDeaths)
-			if deaths < 1 {
-				return float64(kills)
-			}
-			return float64(kills) / float64(deaths)
-		},
-	}
+	StatisticWinRate        = RatioStatistic("Win Rate", StatisticWins, StatisticGamesPlayed)
+	StatisticKills          = DirectStatistic("kills", "Kills")
+	StatisticDeaths         = DirectStatistic("deaths", "Deaths")
+	StatisticKillDeathRatio = RatioStatistic("KDR", StatisticKills, StatisticDeaths)
+	StatisticKillsPerGame   = RatioStatistic("Kills/Game", StatisticKills, StatisticGamesPlayed)
 )
 
 type Statistics struct {
